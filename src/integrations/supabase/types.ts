@@ -37,27 +37,45 @@ export type Database = {
       }
       reports: {
         Row: {
+          ai_category: string | null
+          audio_url: string | null
           category: string
           created_at: string
           device_id: string
           id: string
+          latitude: number | null
+          longitude: number | null
           text: string | null
+          transcript: string | null
+          urgency: string | null
           zone: string
         }
         Insert: {
+          ai_category?: string | null
+          audio_url?: string | null
           category: string
           created_at?: string
           device_id: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           text?: string | null
+          transcript?: string | null
+          urgency?: string | null
           zone: string
         }
         Update: {
+          ai_category?: string | null
+          audio_url?: string | null
           category?: string
           created_at?: string
           device_id?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           text?: string | null
+          transcript?: string | null
+          urgency?: string | null
           zone?: string
         }
         Relationships: []
