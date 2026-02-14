@@ -43,6 +43,12 @@ export type Database = {
           id: string
           text: string | null
           zone: string
+          audio_url: string | null
+          transcript: string | null
+          urgency: string | null
+          ai_category: string | null
+          latitude: number | null
+          longitude: number | null
         }
         Insert: {
           category: string
@@ -51,6 +57,12 @@ export type Database = {
           id?: string
           text?: string | null
           zone: string
+          audio_url?: string | null
+          transcript?: string | null
+          urgency?: string | null
+          ai_category?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Update: {
           category?: string
@@ -59,6 +71,12 @@ export type Database = {
           id?: string
           text?: string | null
           zone?: string
+          audio_url?: string | null
+          transcript?: string | null
+          urgency?: string | null
+          ai_category?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Relationships: []
       }

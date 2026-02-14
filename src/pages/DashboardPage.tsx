@@ -128,7 +128,10 @@ const DashboardPage = () => {
         )}
 
         {activeTab === 'feed' && (
-          <IncidentFeed reports={reports} />
+          <IncidentFeed
+            reports={reports}
+            onReportUpdated={(updated) => setReports((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)))}
+          />
         )}
 
         {activeTab === 'analytics' && (

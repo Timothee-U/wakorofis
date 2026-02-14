@@ -40,3 +40,28 @@ export const CATEGORIES = [
   { id: 'other', label: 'Other', icon: '⚠️' },
 ] as const;
 export type Category = typeof CATEGORIES[number]['id'];
+
+/**
+ * Lightweight on-device AI fallback for urgency and category detection.
+ * This is a heuristic placeholder — replace with a real LLM / speech model
+ * integration (server-side) for production.
+ */
+export function analyzeTextForUrgency(text: string) {
+  const t = text.toLowerCase();
+  const urgentKeywords = ['help', 'urgent', 'bleeding', 'serious', 'fire', 'scream', 'shot', 'falling'];
+  const mediumKeywords = ['fight', 'crowd', 'pushing', 'collapsed', 'injury'];
+  const highMatch = urgentKeywords.some((k) => t.includes(k));
+  const medMatch = mediumKeywords.some((k) => t.includes(k));
+
+  const urgency = highMatch ? 'high' : medMatch ? 'medium' : 'low';
+
+  // simple category guess based on words
+  let ai_category: Category | 'unknown' = 'other';
+  if (t.includes('fire') || t.includes('smoke')) ai_category = 'fire';
+  else if (t.includes('bleed') || t.includes('medical') || t.includes('injury')) ai_category = 'medical';
+  else if (t.includes('fight') || t.includes('punch') || t.includes('knife') || t.includes('gun')) ai_category = 'fight';
+  else if (t.includes('crowd') || t.includes('stampede') || t.includes('crush')) ai_category = 'crowd_pressure';
+
+  return { urgency, ai_category };
+}
+
