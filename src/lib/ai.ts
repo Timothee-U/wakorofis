@@ -6,18 +6,19 @@ export type ServerAnalysis = {
 };
 
 /**
- * Call a configured AI analysis endpoint (edge function / server) if VITE_AI_ANALYSIS_URL is set.
- * Expected to return JSON matching `ServerAnalysis`.
- * This is a thin client-side helper — the actual model call must be implemented server-side.
+ * Call the analyze edge function to classify an incident report using AI.
  */
 export async function callServerAnalysis(payload: { text?: string | null; audio_url?: string | null }): Promise<ServerAnalysis | null> {
-  const url = import.meta.env.VITE_AI_ANALYSIS_URL as string | undefined;
-  if (!url) return null;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze`;
 
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
       body: JSON.stringify(payload),
     });
     if (!res.ok) return null;
