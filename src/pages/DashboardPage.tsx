@@ -14,6 +14,11 @@ type Report = {
   text: string | null;
   device_id: string;
   created_at: string;
+  urgency?: string | null;
+  ai_category?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  transcript?: string | null;
 };
 
 const DashboardPage = () => {

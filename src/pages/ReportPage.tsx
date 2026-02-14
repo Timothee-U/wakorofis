@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Shield, AlertTriangle, Mic, MapPin, Loader2, Zap } from 'lucide-react';
+import { Shield, AlertTriangle, Mic, MapPin, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   getDeviceId, canSubmitReport, markReportSubmitted,
-  getSecondsUntilNextReport, ZONES, CATEGORIES, type Zone, type Category,
+  getSecondsUntilNextReport, ZONES, type Zone,
 } from '@/lib/crowdshield';
 import { callServerAnalysis } from '@/lib/ai';
 import { toast } from 'sonner';
@@ -15,7 +15,6 @@ const ReportPage = () => {
   const [text, setText] = useState('');
   const [cooldown, setCooldown] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
 
   // Recording + transcript
   const [isRecording, setIsRecording] = useState(false);
@@ -29,9 +28,6 @@ const ReportPage = () => {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
-  // AI results
-  const [aiUrgency, setAiUrgency] = useState<string | null>(null);
-  const [aiCategory, setAiCategory] = useState<string | null>(null);
 
   // Auto-capture location on mount
   useEffect(() => {
@@ -117,57 +113,25 @@ const ReportPage = () => {
     }
   };
 
-  // Run AI analysis on text/transcript
-  const runAIAnalysis = async () => {
-    const input = (transcript || text || '').trim();
-    if (!input) {
-      toast.error('Add text or record audio first');
-      return;
-    }
-    setAnalyzing(true);
-    try {
-      const result = await callServerAnalysis({ text: input });
-      if (result) {
-        setAiUrgency(result.urgency ?? null);
-        setAiCategory(result.ai_category ?? null);
-        if (result.transcript) setTranscript(result.transcript);
-        toast.success('AI analysis complete');
-      } else {
-        toast.error('AI analysis unavailable');
-      }
-    } catch {
-      toast.error('AI analysis failed');
-    }
-    setAnalyzing(false);
-  };
-
   const handleSubmit = async () => {
     setSubmitting(true);
 
-    // Upload audio if present
-    let audio_public_url: string | null = null;
-    if (audioUrl && audioChunksRef.current.length) {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      const key = `${getDeviceId()}/${Date.now()}.webm`;
-      const { error: uploadError } = await supabase.storage
-        .from('reports-audio')
-        .upload(key, audioBlob, { contentType: 'audio/webm' });
-      if (!uploadError) {
-        const { data } = supabase.storage.from('reports-audio').getPublicUrl(key);
-        audio_public_url = data?.publicUrl ?? null;
-      }
-    }
-
-    // Run AI if not already done
     const combinedText = (transcript || text || '').trim();
-    let urgency = aiUrgency;
-    let category = aiCategory;
 
-    if (!urgency && combinedText) {
-      const result = await callServerAnalysis({ text: combinedText });
-      if (result) {
-        urgency = result.urgency ?? null;
-        category = result.ai_category ?? null;
+    // Auto AI analysis
+    let urgency: string | null = null;
+    let category: string | null = null;
+
+    if (combinedText) {
+      try {
+        const result = await callServerAnalysis({ text: combinedText });
+        if (result) {
+          urgency = result.urgency ?? null;
+          category = result.ai_category ?? null;
+          if (result.transcript) setTranscript(result.transcript);
+        }
+      } catch {
+        // fallback - submit without AI
       }
     }
 
@@ -178,7 +142,6 @@ const ReportPage = () => {
       category: finalCategory,
       text: text.trim() || transcript || null,
       device_id: getDeviceId(),
-      audio_url: audio_public_url,
       transcript: transcript,
       urgency: urgency || null,
       ai_category: category || null,
@@ -190,6 +153,7 @@ const ReportPage = () => {
     setSubmitting(false);
 
     if (error) {
+      console.error('Insert error:', error);
       toast.error('Failed to submit report. Try again.');
       return;
     }
@@ -201,16 +165,9 @@ const ReportPage = () => {
       setText('');
       setAudioUrl(null);
       setTranscript(null);
-      setAiUrgency(null);
-      setAiCategory(null);
     }, 3000);
   };
 
-  const urgencyColor = (u: string | null) => {
-    if (u === 'high') return 'text-danger';
-    if (u === 'medium') return 'text-warning';
-    return 'text-safe';
-  };
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -337,30 +294,11 @@ const ReportPage = () => {
                 )}
               </div>
 
-              {/* AI Analysis */}
-              <button
-                onClick={runAIAnalysis}
-                disabled={analyzing || (!text.trim() && !transcript)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-shield/15 text-shield font-display font-semibold text-sm uppercase tracking-wider hover:bg-shield/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                {analyzing ? 'Analyzing...' : 'AI Analyze'}
-              </button>
-
-              {(aiUrgency || aiCategory) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {aiUrgency && (
-                    <span className={`text-xs px-2.5 py-1 rounded-full bg-card border border-border font-medium ${urgencyColor(aiUrgency)}`}>
-                      Urgency: {aiUrgency}
-                    </span>
-                  )}
-                  {aiCategory && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-card border border-border font-medium text-shield">
-                      {CATEGORIES.find(c => c.id === aiCategory)?.icon} {CATEGORIES.find(c => c.id === aiCategory)?.label || aiCategory}
-                    </span>
-                  )}
-                </div>
-              )}
+              {/* AI auto-analyzes on submit */}
+              <p className="text-xs text-muted-foreground/70 text-center flex items-center justify-center gap-1.5">
+                <Zap className="w-3 h-3 text-shield" />
+                AI will auto-classify urgency &amp; category on submit
+              </p>
 
               {/* Location */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground border border-border rounded-lg p-2 bg-card/40">
